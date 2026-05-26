@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { createTaskSchema, taskParamSchema } from "./schemas";
-import { Layout } from "../components/Layout";
+import { Layout } from "../ui/Layout";
 import { TasksPage } from "./components/tasks-page";
 import { TasksList } from "./components/tasks-list";
 
