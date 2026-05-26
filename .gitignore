@@ -1,0 +1,20 @@
+# Terraform state et secrets
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+*.tfvars
+!*.tfvars.example
+
+# Credentials
+.env
+.env.*
+*.pem
+*.key
+
+# Node.js
+node_modules/
+.next/
+dist/
+build/
