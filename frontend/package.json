@@ -1,0 +1,21 @@
+{
+  "name": "frontend",
+  "module": "src/index.tsx",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot src/index.tsx",
+    "start": "bun src/index.tsx"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.8.0",
+    "hono": "^4.12.23",
+    "zod": "^4.4.3"
+  }
+}
