@@ -1,13 +1,8 @@
+import type { Task as TaskType } from "../types";
 import { Task } from "./task";
 
-type Task = {
-  id: number;
-  title: string;
-  done: boolean;
-};
-
 type Props = {
-  tasks: Array<Task>;
+  tasks: Array<TaskType>;
 };
 
 export const TasksList = (props:Props) => (

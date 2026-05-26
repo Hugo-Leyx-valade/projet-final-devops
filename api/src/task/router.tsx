@@ -4,54 +4,58 @@ import { createTaskSchema, taskParamSchema } from "./schemas";
 import { Layout } from "../ui/Layout";
 import { TasksPage } from "./components/tasks-page";
 import { TasksList } from "./components/tasks-list";
-
-const tasks = [
-  { id: 1, title: "Provision Terraform infra", done: false },
-  { id: 2, title: "Configure Ansible roles", done: false },
-  { id: 3, title: "Run Molecule tests", done: false },
-];
+import { db } from "../db";
+import type { Task } from "./types";
 
 export const taskRouter = new Hono()
-.get("/", (c) => {
-  return c.html(
-    <Layout title="DevOps Project">
-      <TasksPage tasks={tasks} />
-    </Layout>
-  );
-})
-.post(
-  "/:id/toggle",
-  zValidator("param", taskParamSchema, (result, c) => {
-    if (!result.success) {
-      return c.html(<p class="error">Invalid task ID.</p>, 400)
-    };
-  }),
-  (c) => {
-    const params = c.req.valid("param");
+  .get("/", async (c) => {
+    const tasks = await db<Array<Task>>`SELECT * FROM tasks ORDER BY id`;
 
-    const task = tasks.find((t) => t.id === params.id);
+    return c.html(
+      <Layout title="DevOps Project">
+        <TasksPage tasks={tasks} />
+      </Layout>
+    );
+  })
+  .post(
+    "/:id/toggle",
+    zValidator("param", taskParamSchema, (result, c) => {
+      if (!result.success) {
+        return c.html(<p class="error">Invalid task ID.</p>, 400);
+      }
+    }),
+    async (c) => {
+      const { id } = c.req.valid("param");
 
-    if (!task)  {
-       return c.html(<p class="error">Task not found.</p>, 404)
-    };
+      const [task] = await db<Array<Task>>`SELECT * FROM tasks WHERE id = ${id}`;
 
-    task.done = !task.done;
-    
-    return c.html(<TasksList tasks={tasks} />);
-  }
-).post(
-  "/",
-  zValidator("form", createTaskSchema, (result, c) => {
-    if (!result.success) {
-      const errors = result.error.issues.map((i) => i.message);
-      return c.html(<TasksPage tasks={tasks} errors={errors} />, 422);
+      if (!task) {
+        return c.html(<p class="error">Task not found.</p>, 404);
+      }
+
+      const newDoneAt = task.done_at ? null : new Date();
+      await db`UPDATE tasks SET done_at = ${newDoneAt} WHERE id = ${id}`;
+
+      const tasks = await db<Array<Task>>`SELECT * FROM tasks ORDER BY id`;
+      
+      return c.html(<TasksList tasks={tasks} />);
     }
-  }),
-  (c) => {
-    const form = c.req.valid("form");
+  )
+  .post(
+    "/",
+    zValidator("form", createTaskSchema, (result, c) => {
+      if (!result.success) {
+        const errors = result.error.issues.map((i) => i.message);
+        return c.html(<TasksPage tasks={[]} errors={errors} />, 422);
+      }
+    }),
+    async (c) => {
+      const { title } = c.req.valid("form");
 
-    tasks.push({ id: Date.now(), title:form.title, done: false });
+      await db`INSERT INTO tasks (title) VALUES (${title})`;
 
-    return c.html(<TasksList tasks={tasks} />);
-  }
-);
+      const tasks = await db<Array<Task>>`SELECT * FROM tasks ORDER BY id`;
+
+      return c.html(<TasksList tasks={tasks} />);
+    }
+  );

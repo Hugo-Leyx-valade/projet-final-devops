@@ -1,11 +1,6 @@
+import type { Task } from "../types";
 import { CreateTaskForm } from "./create-task-form";
 import { TasksList } from "./tasks-list";
-
-type Task = {
-  id: number;
-  title: string;
-  done: boolean;
-};
 
 type Props = {
   tasks: Array<Task>;
