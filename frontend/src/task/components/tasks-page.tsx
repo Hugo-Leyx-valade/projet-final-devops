@@ -1,4 +1,3 @@
-import type { FC } from "hono/jsx";
 import { CreateTaskForm } from "./create-task-form";
 import { TasksList } from "./tasks-list";
 
@@ -13,7 +12,7 @@ type Props = {
   errors?: Array<string>;
 };
 
-export const TasksPage: FC<Props> = (props: Props) => (
+export const TasksPage = (props: Props) => (
   <main>
     <TasksList tasks={props.tasks}  />
     <CreateTaskForm errors={props.errors}/>
