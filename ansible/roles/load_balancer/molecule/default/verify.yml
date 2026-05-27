@@ -1,0 +1,54 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Vérifier que Nginx est installé
+      command: nginx -v
+      changed_when: false
+      failed_when: false
+      register: nginx_version
+
+    - name: Assert que Nginx est installé
+      assert:
+        that: nginx_version.rc == 0
+        fail_msg: "Nginx n'est pas installé"
+
+    - name: Vérifier que le service Nginx est actif
+      command: systemctl is-active nginx
+      register: nginx_active
+      changed_when: false
+      failed_when: nginx_active.rc != 0
+
+    - name: Vérifier que le port 80 est en écoute
+      wait_for:
+        port: 80
+        host: 127.0.0.1
+        timeout: 10
+
+    - name: Vérifier que le port 443 est en écoute
+      wait_for:
+        port: 443
+        host: 127.0.0.1
+        timeout: 10
+
+    - name: Vérifier que le certificat SSL est présent
+      stat:
+        path: /etc/nginx/ssl/server.crt
+      register: ssl_cert
+
+    - name: Assert que le certificat SSL existe
+      assert:
+        that: ssl_cert.stat.exists
+        fail_msg: "Le certificat SSL auto-signé est absent"
+
+    - name: Vérifier que la configuration Nginx est valide
+      command: nginx -t
+      changed_when: false
+      failed_when: false
+      register: nginx_test
+
+    - name: Assert que la configuration Nginx est valide
+      assert:
+        that: nginx_test.rc == 0
+        fail_msg: "La configuration Nginx est invalide : {{ nginx_test.stderr }}"

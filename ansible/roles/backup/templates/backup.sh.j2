@@ -1,0 +1,36 @@
+#!/bin/bash
+# Script de backup automatique — généré par Ansible
+# Fréquence : quotidienne à 2h00
+# Rétention locale : 7 jours | Rétention S3 : 90 jours (géré par lifecycle Terraform)
+
+set -euo pipefail
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR=/var/backups/devops-final
+BACKUP_FILE="${BACKUP_DIR}/db_${TIMESTAMP}.sql.gz"
+S3_BUCKET="{{ s3_backup_bucket }}"
+S3_PREFIX="backups/db"
+
+echo "[$(date)] Début du backup..."
+
+# Dump PostgreSQL compressé
+PGPASSWORD="{{ db_password }}" pg_dump \
+  -h {{ db_host }} \
+  -p {{ db_port }} \
+  -U {{ db_user }} \
+  -d {{ db_name }} \
+  --no-password \
+  --format=plain \
+  | gzip > "${BACKUP_FILE}"
+
+echo "[$(date)] Dump créé : ${BACKUP_FILE} ($(du -sh ${BACKUP_FILE} | cut -f1))"
+
+# Upload vers S3
+aws s3 cp "${BACKUP_FILE}" "s3://${S3_BUCKET}/${S3_PREFIX}/$(basename ${BACKUP_FILE})" \
+  --region {{ aws_region }}
+
+echo "[$(date)] Upload S3 terminé : s3://${S3_BUCKET}/${S3_PREFIX}/$(basename ${BACKUP_FILE})"
+
+# Nettoyage local des backups > 7 jours
+find "${BACKUP_DIR}" -name "*.sql.gz" -mtime +7 -delete
+echo "[$(date)] Backup terminé avec succès."

@@ -1,0 +1,47 @@
+---
+- name: Installer Nginx
+  dnf:
+    name: nginx
+    state: present
+
+- name: Installer openssl pour le certificat auto-signé
+  dnf:
+    name: openssl
+    state: present
+
+- name: Créer le dossier SSL
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: '0700'
+
+- name: Générer un certificat SSL auto-signé
+  command: >
+    openssl req -x509 -nodes -days 365
+    -newkey rsa:2048
+    -keyout /etc/nginx/ssl/server.key
+    -out /etc/nginx/ssl/server.crt
+    -subj "/C=FR/ST=Paris/L=Paris/O={{ project_name }}/CN={{ ansible_host }}"
+  args:
+    creates: /etc/nginx/ssl/server.crt
+
+- name: Déployer la configuration Nginx
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/conf.d/app.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload nginx
+
+- name: Supprimer la config Nginx par défaut
+  file:
+    path: /etc/nginx/conf.d/default.conf
+    state: absent
+  notify: reload nginx
+
+- name: Démarrer et activer Nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: true

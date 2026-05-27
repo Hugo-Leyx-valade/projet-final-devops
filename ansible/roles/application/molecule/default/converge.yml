@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    project_name: devops-final
+    app_port: 3000
+    app_dir: /app
+    app_user: appuser
+    db_host: localhost
+    db_port: 5432
+    db_name: appdb
+    db_user: appuser
+    db_password: testpassword
+  roles:
+    - role: application

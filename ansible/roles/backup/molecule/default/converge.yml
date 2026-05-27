@@ -1,0 +1,22 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    app_user: appuser
+    db_host: localhost
+    db_port: 5432
+    db_name: appdb
+    db_user: appuser
+    db_password: testpassword
+    s3_backup_bucket: test-backup-bucket
+    aws_region: eu-west-3
+  pre_tasks:
+    - name: Créer l'utilisateur applicatif pour les tests
+      user:
+        name: appuser
+        shell: /bin/bash
+        create_home: true
+        state: present
+  roles:
+    - role: backup
