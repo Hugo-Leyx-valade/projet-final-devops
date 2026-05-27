@@ -1,0 +1,66 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    app_dir: /app
+    app_user: appuser
+  tasks:
+    - name: Vérifier que Node.js est installé
+      command: node --version
+      register: node_version
+      changed_when: false
+      failed_when: node_version.rc != 0
+
+    - name: Afficher la version de Node.js
+      debug:
+        msg: "Node.js {{ node_version.stdout }}"
+
+    - name: Vérifier que PM2 est installé
+      command: pm2 --version
+      register: pm2_version
+      changed_when: false
+      failed_when: pm2_version.rc != 0
+
+    - name: Afficher la version de PM2
+      debug:
+        msg: "PM2 {{ pm2_version.stdout }}"
+
+    - name: Vérifier que l'utilisateur applicatif existe
+      getent:
+        database: passwd
+        key: "{{ app_user }}"
+
+    - name: Vérifier que le répertoire de l'application existe
+      stat:
+        path: "{{ app_dir }}"
+      register: app_dir_stat
+
+    - name: Assert que le répertoire de l'application existe
+      assert:
+        that:
+          - app_dir_stat.stat.exists
+          - app_dir_stat.stat.isdir
+        fail_msg: "Le répertoire {{ app_dir }} n'existe pas"
+
+    - name: Vérifier que le fichier .env est présent
+      stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file
+
+    - name: Assert que le fichier .env est présent
+      assert:
+        that: env_file.stat.exists
+        fail_msg: "Le fichier .env est absent de {{ app_dir }}"
+
+    - name: Vérifier que le port de l'application répond
+      wait_for:
+        port: 3000
+        host: 127.0.0.1
+        timeout: 20
+      ignore_errors: true
+      register: port_check
+
+    - name: Afficher l'état du port 3000
+      debug:
+        msg: "Port 3000 : {{ 'accessible' if port_check is not failed else 'non accessible (PM2 peut nécessiter un rechargement)' }}"

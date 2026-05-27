@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    project_name: devops-final
+    app_port: 3000
+  roles:
+    - role: load_balancer

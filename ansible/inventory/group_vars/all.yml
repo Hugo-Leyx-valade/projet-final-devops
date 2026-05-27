@@ -1,0 +1,20 @@
+---
+# Variables communes à tous les groupes
+project_name: devops-final
+environment: production
+aws_region: eu-west-3
+
+# Base de données RDS
+db_host: devops-final-db.cjyy4o4ysi2f.eu-west-3.rds.amazonaws.com
+db_port: 5432
+db_name: appdb
+db_user: appuser
+db_password: "Devops2024!Secure#Pwd"
+
+# Application
+app_port: 3000
+app_dir: /app
+app_user: appuser
+
+# S3 backup
+s3_backup_bucket: devops-final-backups-095713296107

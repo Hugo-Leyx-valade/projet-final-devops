@@ -1,0 +1,32 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    db_host: 127.0.0.1
+    db_port: 5432
+    db_name: appdb
+    db_user: appuser
+    db_password: testpassword
+  tasks:
+    - name: Vérifier que le client psql est installé
+      command: psql --version
+      register: psql_version
+      changed_when: false
+      failed_when: psql_version.rc != 0
+
+    - name: Afficher la version de psql
+      debug:
+        msg: "{{ psql_version.stdout }}"
+
+    - name: Vérifier la connectivité à la base de données
+      command: >
+        psql postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }}
+        -c "SELECT version();"
+      register: db_check
+      changed_when: false
+      failed_when: db_check.rc != 0
+
+    - name: Afficher la version PostgreSQL confirmée
+      debug:
+        msg: "{{ db_check.stdout_lines[0] }}"

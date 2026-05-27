@@ -1,0 +1,55 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    app_user: appuser
+  tasks:
+    - name: Vérifier que le script de backup est déployé
+      stat:
+        path: /usr/local/bin/backup.sh
+      register: backup_script
+
+    - name: Assert que le script backup.sh existe
+      assert:
+        that: backup_script.stat.exists
+        fail_msg: "Le script /usr/local/bin/backup.sh est absent"
+
+    - name: Assert que le script backup.sh est exécutable
+      assert:
+        that: backup_script.stat.mode == '0755'
+        fail_msg: "Le script backup.sh n'est pas exécutable (mode {{ backup_script.stat.mode }})"
+
+    - name: Vérifier que le répertoire de backup local existe
+      stat:
+        path: /var/backups/devops-final
+      register: backup_dir
+
+    - name: Assert que le répertoire de backup existe
+      assert:
+        that:
+          - backup_dir.stat.exists
+          - backup_dir.stat.isdir
+        fail_msg: "Le répertoire /var/backups/devops-final est absent"
+
+    - name: Récupérer la crontab de l'utilisateur applicatif
+      command: crontab -l -u {{ app_user }}
+      register: cron_list
+      changed_when: false
+      failed_when: false
+
+    - name: Assert que le cron de backup quotidien est configuré
+      assert:
+        that: "'/usr/local/bin/backup.sh' in cron_list.stdout"
+        fail_msg: "Le cron de backup n'est pas configuré pour l'utilisateur {{ app_user }}"
+
+    - name: Vérifier que le bucket S3 est référencé dans le script
+      command: grep -q "test-backup-bucket" /usr/local/bin/backup.sh
+      changed_when: false
+      failed_when: false
+      register: bucket_check
+
+    - name: Assert que le bucket S3 est bien configuré dans le script
+      assert:
+        that: bucket_check.rc == 0
+        fail_msg: "Le bucket S3 n'est pas référencé dans backup.sh"

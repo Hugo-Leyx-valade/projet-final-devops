@@ -1,0 +1,27 @@
+---
+# Playbook principal — déploiement complet de l'infrastructure
+# Usage : ansible-playbook site.yml
+
+- name: Configuration du load balancer (Nginx + HTTPS)
+  hosts: load_balancer
+  become: true
+  roles:
+    - load_balancer
+
+- name: Déploiement de l'application TypeScript SSR
+  hosts: app
+  become: true
+  roles:
+    - application
+
+- name: Configuration de la base de données
+  hosts: database
+  become: true
+  roles:
+    - database
+
+- name: Configuration des backups automatiques
+  hosts: backup
+  become: true
+  roles:
+    - backup
