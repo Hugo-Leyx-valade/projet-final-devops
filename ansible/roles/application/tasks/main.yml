@@ -53,6 +53,14 @@
     chdir: "{{ app_dir }}"
   become_user: "{{ app_user }}"
 
+- name: Télécharger le certificat SSL RDS (eu-west-3)
+  get_url:
+    url: https://truststore.pki.rds.amazonaws.com/eu-west-3/eu-west-3-bundle.pem
+    dest: "{{ app_dir }}/src/key.pem"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+
 - name: Déployer le service systemd pour l'application
   template:
     src: app.service.j2
