@@ -19,19 +19,19 @@
     - name: Initialiser la base de données PostgreSQL
       command: postgresql-setup --initdb
       args:
-        creates: /var/lib/pgsql/15/data/PG_VERSION
+        creates: /var/lib/pgsql/data/PG_VERSION
       ignore_errors: true
 
     - name: Configurer pg_hba.conf — authentification md5
       replace:
-        path: /var/lib/pgsql/15/data/pg_hba.conf
+        path: /var/lib/pgsql/data/pg_hba.conf
         regexp: '(\s+)ident$'
         replace: '\1md5'
       ignore_errors: true
 
-    - name: Démarrer le service PostgreSQL 15
+    - name: Démarrer le service PostgreSQL
       systemd:
-        name: postgresql15
+        name: postgresql
         state: started
         enabled: true
 

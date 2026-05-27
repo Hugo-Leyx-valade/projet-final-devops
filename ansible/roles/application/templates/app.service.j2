@@ -1,0 +1,17 @@
+[Unit]
+Description={{ project_name }} — application Bun/Hono
+After=network.target
+
+[Service]
+Type=simple
+User={{ app_user }}
+WorkingDirectory={{ app_dir }}
+EnvironmentFile={{ app_dir }}/.env
+ExecStart=/usr/local/bin/bun src/index.tsx
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
