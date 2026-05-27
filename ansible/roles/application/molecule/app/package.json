@@ -1,0 +1,10 @@
+{
+  "name": "devops-final",
+  "version": "1.0.0",
+  "description": "Application stub pour tests Molecule",
+  "scripts": {
+    "build": "echo 'Build OK'",
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

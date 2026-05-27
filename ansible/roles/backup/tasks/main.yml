@@ -1,0 +1,42 @@
+---
+- name: Installer les outils nécessaires
+  dnf:
+    name:
+      - postgresql15
+      - awscli
+    state: present
+
+- name: Créer le répertoire de backup local
+  file:
+    path: /var/backups/devops-final
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0750'
+
+- name: Déployer le script de backup
+  template:
+    src: backup.sh.j2
+    dest: /usr/local/bin/backup.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configurer le cron de backup quotidien (2h du matin)
+  cron:
+    name: "Backup BDD vers S3"
+    user: "{{ app_user }}"
+    minute: "0"
+    hour: "2"
+    job: "/usr/local/bin/backup.sh >> /var/log/backup.log 2>&1"
+    state: present
+
+- name: Configurer le cron de nettoyage local (hebdomadaire)
+  cron:
+    name: "Nettoyage backups locaux > 7 jours"
+    user: root
+    minute: "30"
+    hour: "3"
+    weekday: "0"
+    job: "find /var/backups/devops-final -name '*.sql.gz' -mtime +7 -delete"
+    state: present

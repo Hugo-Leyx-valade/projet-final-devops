@@ -1,0 +1,15 @@
+---
+- name: Prepare — installer les prérequis système
+  hosts: all
+  become: true
+  tasks:
+    - name: Installer cronie (fournit crontab)
+      dnf:
+        name: cronie
+        state: present
+
+    - name: Démarrer et activer le service crond
+      systemd:
+        name: crond
+        state: started
+        enabled: true
