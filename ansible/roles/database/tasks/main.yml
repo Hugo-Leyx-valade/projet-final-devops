@@ -19,19 +19,17 @@
   debug:
     msg: "{{ db_check.stdout_lines[0] }}"
 
-- name: Copier les scripts de migration SQL
+- name: Copier le schéma SQL
   copy:
-    src: "{{ playbook_dir }}/../app/migrations/"
-    dest: /tmp/migrations/
+    src: "{{ playbook_dir }}/../api/schema.sql"
+    dest: /tmp/schema.sql
     owner: "{{ app_user }}"
     mode: '0644'
   ignore_errors: true
 
-- name: Exécuter les migrations SQL
+- name: Appliquer le schéma SQL
   shell: >
-    for f in /tmp/migrations/*.sql; do
-      psql postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }} -f "$f";
-    done
+    psql postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }} -f /tmp/schema.sql
   args:
     executable: /bin/bash
   become_user: "{{ app_user }}"

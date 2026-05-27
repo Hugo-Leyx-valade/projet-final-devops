@@ -4,7 +4,14 @@
     name:
       - postgresql15
       - awscli
+      - cronie
     state: present
+
+- name: Démarrer et activer crond
+  systemd:
+    name: crond
+    state: started
+    enabled: true
 
 - name: Créer le répertoire de backup local
   file:

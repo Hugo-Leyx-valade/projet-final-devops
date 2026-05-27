@@ -1,21 +1,17 @@
 ---
-- name: Installer Node.js 20
-  block:
-    - name: Ajouter le dépôt NodeSource
-      shell: curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-      args:
-        creates: /etc/yum.repos.d/nodesource-el9.repo
-
-    - name: Installer nodejs
-      dnf:
-        name: nodejs
-        state: present
-
-- name: Installer PM2 globalement
-  npm:
-    name: pm2
-    global: true
+- name: Installer les prérequis Bun
+  dnf:
+    name:
+      - unzip
+      - rsync
     state: present
+
+- name: Installer Bun (runtime JavaScript)
+  shell: curl -fsSL https://bun.sh/install | bash
+  environment:
+    BUN_INSTALL: /usr/local
+  args:
+    creates: /usr/local/bin/bun
 
 - name: Créer l'utilisateur applicatif
   user:
@@ -43,47 +39,32 @@
 
 - name: Copier les sources de l'application
   synchronize:
-    src: "{{ playbook_dir }}/../app/"
+    src: "{{ playbook_dir }}/../api/"
     dest: "{{ app_dir }}/"
     rsync_opts:
       - "--exclude=node_modules"
       - "--exclude=.git"
-      - "--exclude=.next"
   become_user: "{{ app_user }}"
   notify: restart app
 
-- name: Installer les dépendances npm
-  npm:
-    path: "{{ app_dir }}"
-    state: present
-  become_user: "{{ app_user }}"
-
-- name: Build de l'application TypeScript SSR
-  command: npm run build
+- name: Installer les dépendances avec Bun
+  command: /usr/local/bin/bun install
   args:
     chdir: "{{ app_dir }}"
   become_user: "{{ app_user }}"
+
+- name: Déployer le service systemd pour l'application
+  template:
+    src: app.service.j2
+    dest: /etc/systemd/system/{{ project_name }}.service
+    owner: root
+    group: root
+    mode: '0644'
   notify: restart app
 
-- name: Démarrer l'application avec PM2
-  command: >
-    pm2 start npm --name "{{ project_name }}" -- start
-  args:
-    chdir: "{{ app_dir }}"
-  become_user: "{{ app_user }}"
-  ignore_errors: true
-
-- name: Sauvegarder la liste PM2 pour redémarrage automatique
-  command: pm2 save
-  become_user: "{{ app_user }}"
-
-- name: Configurer PM2 au démarrage système
-  command: pm2 startup systemd -u {{ app_user }} --hp /home/{{ app_user }}
-  register: pm2_startup
-  changed_when: false
-
-- name: Activer le service PM2
+- name: Démarrer et activer le service applicatif
   systemd:
-    name: "pm2-{{ app_user }}"
+    name: "{{ project_name }}"
+    state: started
     enabled: true
     daemon_reload: true
