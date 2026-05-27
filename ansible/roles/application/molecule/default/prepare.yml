@@ -1,0 +1,12 @@
+---
+- name: Prepare — prérequis système pour le rôle application
+  hosts: all
+  become: true
+  tasks:
+    - name: Installer curl et unzip (requis pour l'install Bun)
+      dnf:
+        name:
+          - curl
+          - unzip
+          - rsync
+        state: present

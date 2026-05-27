@@ -5,26 +5,17 @@
   vars:
     app_dir: /app
     app_user: appuser
+    project_name: devops-final
   tasks:
-    - name: Vérifier que Node.js est installé
-      command: node --version
-      register: node_version
+    - name: Vérifier que Bun est installé
+      command: /usr/local/bin/bun --version
+      register: bun_version
       changed_when: false
-      failed_when: node_version.rc != 0
+      failed_when: bun_version.rc != 0
 
-    - name: Afficher la version de Node.js
+    - name: Afficher la version de Bun
       debug:
-        msg: "Node.js {{ node_version.stdout }}"
-
-    - name: Vérifier que PM2 est installé
-      command: pm2 --version
-      register: pm2_version
-      changed_when: false
-      failed_when: pm2_version.rc != 0
-
-    - name: Afficher la version de PM2
-      debug:
-        msg: "PM2 {{ pm2_version.stdout }}"
+        msg: "Bun {{ bun_version.stdout }}"
 
     - name: Vérifier que l'utilisateur applicatif existe
       getent:
@@ -53,14 +44,24 @@
         that: env_file.stat.exists
         fail_msg: "Le fichier .env est absent de {{ app_dir }}"
 
-    - name: Vérifier que le port de l'application répond
+    - name: Vérifier que l'unité systemd est présente
+      stat:
+        path: "/etc/systemd/system/{{ project_name }}.service"
+      register: service_file
+
+    - name: Assert que le fichier service systemd existe
+      assert:
+        that: service_file.stat.exists
+        fail_msg: "Le fichier systemd {{ project_name }}.service est absent"
+
+    - name: Vérifier que le service est actif
+      command: systemctl is-active {{ project_name }}
+      register: service_active
+      changed_when: false
+      failed_when: service_active.rc != 0
+
+    - name: Vérifier que le port 3000 répond
       wait_for:
         port: 3000
         host: 127.0.0.1
         timeout: 20
-      ignore_errors: true
-      register: port_check
-
-    - name: Afficher l'état du port 3000
-      debug:
-        msg: "Port 3000 : {{ 'accessible' if port_check is not failed else 'non accessible (PM2 peut nécessiter un rechargement)' }}"
