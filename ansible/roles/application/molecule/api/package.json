@@ -1,0 +1,9 @@
+{
+  "name": "devops-final-stub",
+  "version": "1.0.0",
+  "description": "Application stub pour tests Molecule",
+  "scripts": {
+    "start": "bun server.js"
+  },
+  "dependencies": {}
+}
