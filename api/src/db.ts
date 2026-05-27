@@ -1,4 +1,6 @@
 import postgres from "postgres";
+import fs from 'fs'
+import path from "path";
 
 const requiredEnv = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"] as const;
 
@@ -14,4 +16,8 @@ export const db = postgres({
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl:{
+    rejectUnauthorized: true, 
+    ca: fs.readFileSync(path.resolve(__dirname, './key.pem')),
+  }
 });
