@@ -13,6 +13,9 @@ terraform/terraform.tfvars
 *.pem
 *.key
 
+# Ansible Vault
+ansible/.vault_pass
+
 # Node.js
 node_modules/
 .next/
