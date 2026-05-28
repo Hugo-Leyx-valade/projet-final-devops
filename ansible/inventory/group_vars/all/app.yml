@@ -1,0 +1,5 @@
+---
+# Configuration de l'application
+app_port: 3000
+app_dir: /app
+app_user: appuser
