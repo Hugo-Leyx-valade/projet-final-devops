@@ -1,0 +1,4 @@
+---
+# FICHIER À CHIFFRER avec : ansible-vault encrypt vault.yml
+# Secrets - ne jamais committer en clair
+vault_db_password: "Devops2024!Secure#Pwd"

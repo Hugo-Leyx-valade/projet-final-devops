@@ -1,0 +1,3 @@
+---
+# Configuration des sauvegardes S3
+s3_backup_bucket: devops-final-backups-095713296107
