@@ -1,0 +1,110 @@
+---
+# Playbook de restauration de la base de données depuis S3
+#
+# Usage :
+#   ansible-playbook restore.yml
+#   ansible-playbook restore.yml -e "backup_file=db_20240115_020001.sql.gz"
+#
+# Par défaut, restaure le backup le plus récent disponible dans S3.
+# Pour restaurer un backup spécifique, passer le nom du fichier via -e backup_file=...
+
+- name: Restauration de la base de données depuis S3
+  hosts: backup
+  become: true
+  vars:
+    restore_tmp_dir: /tmp/restore
+    backup_file: ""  # vide = automatique (backup le plus récent)
+
+  tasks:
+    - name: Créer le répertoire temporaire de restauration
+      file:
+        path: "{{ restore_tmp_dir }}"
+        state: directory
+        mode: '0700'
+
+    # ---------------------------------------------------------------
+    # Identifier le backup à restaurer
+    # ---------------------------------------------------------------
+    - name: Lister les backups disponibles dans S3
+      command: >
+        aws s3 ls s3://{{ s3_backup_bucket }}/backups/db/
+        --region {{ aws_region }}
+      register: s3_listing
+      changed_when: false
+      when: backup_file == ""
+
+    - name: Identifier le backup le plus récent
+      set_fact:
+        target_backup: "{{ s3_listing.stdout_lines | last | split() | last }}"
+      when: backup_file == ""
+
+    - name: Utiliser le backup spécifié manuellement
+      set_fact:
+        target_backup: "{{ backup_file }}"
+      when: backup_file != ""
+
+    - name: Afficher le backup sélectionné
+      debug:
+        msg: "Restauration depuis : s3://{{ s3_backup_bucket }}/backups/db/{{ target_backup }}"
+
+    # ---------------------------------------------------------------
+    # Téléchargement
+    # ---------------------------------------------------------------
+    - name: Télécharger le backup depuis S3
+      command: >
+        aws s3 cp
+        s3://{{ s3_backup_bucket }}/backups/db/{{ target_backup }}
+        {{ restore_tmp_dir }}/restore.sql.gz
+        --region {{ aws_region }}
+      changed_when: true
+
+    - name: Décompresser le backup
+      command: gunzip -f {{ restore_tmp_dir }}/restore.sql.gz
+      changed_when: true
+
+    # ---------------------------------------------------------------
+    # Restauration PostgreSQL
+    # ---------------------------------------------------------------
+    - name: Stopper l'application avant la restauration
+      systemd:
+        name: "{{ project_name }}"
+        state: stopped
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['app'] }}"
+      ignore_errors: true
+
+    - name: Restaurer la base de données
+      shell: >
+        PGPASSWORD="{{ db_password }}"
+        psql
+        -h {{ db_host }}
+        -p {{ db_port }}
+        -U {{ db_user }}
+        -d {{ db_name }}
+        -f {{ restore_tmp_dir }}/restore.sql
+      args:
+        executable: /bin/bash
+      no_log: true
+      changed_when: true
+
+    - name: Redémarrer l'application après restauration
+      systemd:
+        name: "{{ project_name }}"
+        state: started
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['app'] }}"
+      ignore_errors: true
+
+    # ---------------------------------------------------------------
+    # Nettoyage
+    # ---------------------------------------------------------------
+    - name: Supprimer les fichiers temporaires
+      file:
+        path: "{{ restore_tmp_dir }}"
+        state: absent
+
+    - name: Résumé de la restauration
+      debug:
+        msg: >
+          Restauration terminée depuis {{ target_backup }}.
+          Base de données {{ db_name }} sur {{ db_host }} restaurée avec succès.

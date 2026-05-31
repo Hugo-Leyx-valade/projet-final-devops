@@ -12,7 +12,9 @@ Infrastructure cloud automatisée sur AWS provisionnée par Terraform et configu
 4. [Déploiement de zéro](#déploiement-de-zéro)
 5. [Ansible Vault](#ansible-vault)
 6. [Stratégie de backup](#stratégie-de-backup)
-7. [Tests Molecule](#tests-molecule)
+7. [Restauration depuis S3](#restauration-depuis-s3)
+8. [Usine logicielle (CI/CD)](#usine-logicielle-cicd)
+9. [Tests Molecule](#tests-molecule)
 
 ---
 
@@ -203,7 +205,7 @@ Mettre à jour `ansible/inventory/hosts.ini` avec les IPs privées des instances
 
 ```bash
 # Créer le fichier de mot de passe vault
-echo "devops2024" > ansible/.vault_pass
+echo "projet-devops" > ansible/.vault_pass
 chmod 600 ansible/.vault_pass
 
 # Vérifier le contenu du vault
@@ -238,11 +240,11 @@ aws ssm start-session --target <instance-id> --region eu-west-3
 
 Les secrets sont chiffrés avec Ansible Vault (AES-256). Le fichier `vault.yml` est versionné dans git en état chiffré — seul le fichier `.vault_pass` ne doit jamais être commité.
 
-**Mot de passe vault : `devops2024`**
+**Mot de passe vault : `projet-devops`**
 
 ```bash
 # Configurer le mot de passe (une seule fois)
-echo "devops2024" > ansible/.vault_pass
+echo "projet-devops" > ansible/.vault_pass
 chmod 600 ansible/.vault_pass
 
 # Voir les secrets déchiffrés
@@ -305,6 +307,127 @@ gunzip -c /tmp/db_20240115_020001.sql.gz | psql postgresql://appuser:<password>@
 
 ---
 
+## Restauration depuis S3
+
+Le playbook `restore.yml` est **indépendant** du playbook principal. Il restaure le backup le plus récent (ou un backup spécifique) depuis le bucket S3.
+
+### Restaurer le backup le plus récent
+
+```bash
+cd ansible
+ansible-playbook restore.yml
+```
+
+### Restaurer un backup spécifique
+
+```bash
+# Lister les backups disponibles
+aws s3 ls s3://devops-final-backups-095713296107/backups/db/ --region eu-west-3
+
+# Restaurer un backup précis
+ansible-playbook restore.yml -e "backup_file=db_20240115_020001.sql.gz"
+```
+
+### Ce que fait le playbook
+
+1. Liste les backups S3 et identifie le plus récent (ou utilise le fichier passé en paramètre)
+2. Télécharge le fichier `.sql.gz` depuis S3
+3. Décompresse le dump
+4. **Stoppe l'application** sur toutes les instances `[app]` pour éviter des écritures concurrentes
+5. Exécute `psql` pour restaurer le dump sur RDS
+6. **Redémarre l'application**
+7. Supprime les fichiers temporaires
+
+### Prérequis
+
+- AWS CLI configuré avec les permissions S3 (déjà en place via IAM role EC2)
+- `postgresql15` installé sur l'hôte (géré par le rôle `backup`)
+- Variables vault disponibles (`db_password`, `db_host`)
+
+---
+
+## Usine logicielle (CI/CD)
+
+Instance dédiée, isolée du réseau applicatif (subnet 10.0.30.0/24, security group distinct).
+
+### Architecture CI tools
+
+```
+Internet
+   │
+  :443 (HTTPS via Nginx reverse proxy)
+   │
+  ┌──────────────────────────────────────┐
+  │         citools-1 (t3.medium)         │
+  │         subnet 10.0.30.0/24           │
+  │                                       │
+  │  Nginx :443 → Jenkins    :8080        │
+  │  Nginx :443 → SonarQube  :9000        │
+  │  Nginx :443 → Nexus      :8081        │
+  └──────────────────────────────────────┘
+```
+
+### Flux réseau et ports
+
+| Port | Service | Accès |
+|---|---|---|
+| 80 | HTTP → redirect HTTPS | Internet |
+| 443 | HTTPS (Nginx proxy) | Internet |
+| 8080 | Jenkins (direct) | Internet |
+| 9000 | SonarQube (direct) | Internet |
+| 8081 | Nexus (direct) | Internet |
+
+> Le security group `sg-citools` est indépendant de `sg-app` — aucune règle croisée entre les deux.
+
+### Déployer l'usine logicielle
+
+```bash
+# 1. Récupérer l'IP publique depuis les outputs Terraform
+terraform output citools_public_ip
+
+# 2. Mettre à jour l'inventaire
+# Remplacer CITOOLS_PUBLIC_IP dans ansible/inventory/hosts.ini
+
+# 3. Déployer uniquement les outils CI
+cd ansible
+ansible-playbook site.yml --limit citools
+
+# Ou déployer tout en une fois
+ansible-playbook site.yml
+```
+
+### Accès aux interfaces web
+
+| Outil | URL directe | URL via Nginx (HTTPS) |
+|---|---|---|
+| Jenkins | `http://<IP>:8080` | `https://jenkins.citools.local` |
+| SonarQube | `http://<IP>:9000` | `https://sonarqube.citools.local` |
+| Nexus | `http://<IP>:8081` | `https://nexus.citools.local` |
+
+Pour utiliser les URLs avec domaine, ajouter dans `/etc/hosts` :
+```
+<CITOOLS_IP>  jenkins.citools.local sonarqube.citools.local nexus.citools.local
+```
+
+### Credentials initiaux
+
+| Outil | Login | Mot de passe |
+|---|---|---|
+| Jenkins | — | Affiché à la fin du playbook (aussi dans `/var/lib/jenkins/secrets/initialAdminPassword`) |
+| SonarQube | `admin` | `admin` (à changer à la première connexion) |
+| Nexus | `admin` | Dans `/opt/sonatype-work/nexus3/admin.password` |
+
+### Rôles Ansible citools
+
+| Rôle | Description |
+|---|---|
+| `jenkins` | Java 17, dépôt LTS, service systemd, mot de passe initial affiché |
+| `sonarqube` | Java 17, tuning kernel, installation /opt, service systemd |
+| `nexus` | Java 11, utilisateur nexus, installation /opt, service systemd |
+| `citools_proxy` | Nginx, SSL auto-signé, virtual hosts HTTPS pour chaque outil |
+
+---
+
 ## Tests Molecule
 
 Les tests vérifient chaque rôle Ansible en isolation dans un conteneur Docker Amazon Linux 2023, avec systemd actif.
@@ -353,6 +476,9 @@ done
 | `application` | Bun installé, utilisateur appuser créé, service systemd actif, port 3000 en écoute |
 | `database` | Client postgresql15 installé, connectivité RDS vérifiée |
 | `backup` | Script backup présent, cron configuré, répertoire backup créé |
+| `jenkins` | Java installé, Jenkins installé (rpm), service actif, port 8080 en écoute |
+| `sonarqube` | Java installé, utilisateur sonarqube créé, /opt/sonarqube/bin présent, service systemd configuré, vm.max_map_count >= 524288 |
+| `nexus` | Java installé, utilisateur nexus créé, /opt/nexus/bin/nexus présent, service systemd configuré, /opt/sonatype-work présent |
 
 ### Dépannage Molecule
 

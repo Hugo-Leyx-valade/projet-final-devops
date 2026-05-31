@@ -1,0 +1,42 @@
+---
+- name: Verify SonarQube
+  hosts: all
+  become: true
+  tasks:
+    - name: Vérifier que Java est installé
+      command: java -version
+      changed_when: false
+
+    - name: Vérifier que l'utilisateur sonarqube existe
+      command: id sonarqube
+      changed_when: false
+
+    - name: Vérifier que le répertoire SonarQube est présent
+      stat:
+        path: /opt/sonarqube/bin
+      register: sq_bin
+
+    - name: Affirmer que SonarQube est installé
+      assert:
+        that: sq_bin.stat.exists
+        fail_msg: "Le répertoire /opt/sonarqube/bin est absent"
+
+    - name: Vérifier que le service systemd est configuré
+      stat:
+        path: /etc/systemd/system/sonarqube.service
+      register: sq_service
+
+    - name: Affirmer que le service est présent
+      assert:
+        that: sq_service.stat.exists
+        fail_msg: "Le fichier de service sonarqube.service est absent"
+
+    - name: Vérifier que vm.max_map_count est configuré
+      command: sysctl vm.max_map_count
+      register: map_count
+      changed_when: false
+
+    - name: Affirmer que vm.max_map_count >= 524288
+      assert:
+        that: map_count.stdout.split('=')[1] | trim | int >= 524288
+        fail_msg: "vm.max_map_count insuffisant : {{ map_count.stdout }}"
