@@ -1,9 +1,9 @@
 ---
 # Configuration de la base de données RDS (non-sensible)
-db_host: devops-final-db.cjyy4o4ysi2f.eu-west-3.rds.amazonaws.com
 db_port: 5432
 db_name: appdb
 db_user: appuser
 
-# Le mot de passe est dans vault.yml (chiffré)
+# Valeurs sensibles provenant du vault (chiffré)
+db_host: "{{ vault_db_host }}"
 db_password: "{{ vault_db_password }}"

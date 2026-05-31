@@ -1,0 +1,11 @@
+---
+# Configuration AWS (non-sensible)
+aws_account_id: "095713296107"
+aws_vpc_cidr: "10.0.0.0/16"
+
+# Credentials AWS depuis le vault (chiffré)
+aws_access_key: "{{ vault_aws_access_key }}"
+aws_secret_key: "{{ vault_aws_secret_key }}"
+
+# IDs des instances depuis le vault (extraits du tfstate)
+app_instance_ids: "{{ vault_app_instance_ids }}"

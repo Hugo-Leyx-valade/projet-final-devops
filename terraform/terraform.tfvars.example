@@ -1,0 +1,10 @@
+aws_region        = "eu-west-3"
+project_name      = "devops-final"
+environment       = "production"
+app_instance_type = "t3.small"
+db_instance_class = "db.t3.micro"
+db_name           = "appdb"
+db_username       = "appuser"
+db_password       = "CHANGE_ME_strong_password_123!"
+app_port          = 3000
+ssh_public_key    = "ssh-rsa AAAA... your-public-key-here"
