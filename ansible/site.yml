@@ -25,3 +25,12 @@
   become: true
   roles:
     - backup
+
+- name: Déploiement de l'usine logicielle (Jenkins + SonarQube + Nexus)
+  hosts: citools
+  become: true
+  roles:
+    - jenkins
+    - sonarqube
+    - nexus
+    - citools_proxy

@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    project_name: devops-final
+    nexus_version: "3.66.0-02"
+  roles:
+    - role: nexus

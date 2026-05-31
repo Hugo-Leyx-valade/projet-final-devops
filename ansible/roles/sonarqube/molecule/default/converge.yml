@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    project_name: devops-final
+    sonarqube_version: "10.4.1.88267"
+  roles:
+    - role: sonarqube
