@@ -1,5 +1,8 @@
 Voici la transformation complète de ton sujet de projet DevOps au format Markdown, structurée de manière claire et lisible pour ton repository ou tes notes d'étude.
 
+
+MDP vault : projet-devops
+
 ---
 
 PROJET DEVOPS
@@ -197,3 +200,5 @@ Fournir un playbook Ansible dédié `restore.yml` capable de récupérer le dern
 - Pensez au `.gitignore` avant le premier commit, et ayez un historique clair.
 
 **Bonne chance à tous !**
+
+

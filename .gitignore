@@ -6,6 +6,9 @@ terraform/terraform.tfstate.backup
 terraform/terraform.tfvars
 *.tfvars
 !*.tfvars.example
+# tfstate ansible (copie locale utilisée par le dynamic inventory)
+ansible/terraform.tfstate
+ansible/terraform.tfstate.backup
 
 # Credentials
 .env
