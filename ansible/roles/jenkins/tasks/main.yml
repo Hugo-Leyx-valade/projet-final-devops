@@ -1,7 +1,7 @@
 ---
-- name: Installer Java 17 (requis par Jenkins)
+- name: Installer Java 21 (requis par Jenkins LTS >= 2.463)
   dnf:
-    name: java-17-amazon-corretto
+    name: java-21-amazon-corretto
     state: present
 
 - name: Ajouter le dépôt Jenkins LTS
@@ -20,6 +20,11 @@
     name: jenkins
     state: present
     update_cache: true
+
+- name: S'assurer que Java 21 est la version par défaut
+  alternatives:
+    name: java
+    path: /usr/lib/jvm/java-21-amazon-corretto.x86_64/bin/java
 
 - name: Démarrer et activer Jenkins
   systemd:
