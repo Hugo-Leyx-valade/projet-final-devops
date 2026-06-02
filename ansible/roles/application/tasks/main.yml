@@ -1,0 +1,78 @@
+---
+- name: Installer les prérequis Bun
+  dnf:
+    name:
+      - unzip
+      - rsync
+    state: present
+
+- name: Installer Bun (runtime JavaScript)
+  shell: curl -fsSL https://bun.sh/install | bash
+  environment:
+    BUN_INSTALL: /usr/local
+  args:
+    creates: /usr/local/bin/bun
+
+- name: Créer l'utilisateur applicatif
+  user:
+    name: "{{ app_user }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Créer le répertoire de l'application
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+
+- name: Déployer le fichier d'environnement
+  template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0600'
+  notify: restart app
+
+- name: Copier les sources de l'application
+  synchronize:
+    src: "{{ playbook_dir }}/../api/"
+    dest: "{{ app_dir }}/"
+    rsync_opts:
+      - "--exclude=node_modules"
+      - "--exclude=.git"
+  become_user: "{{ app_user }}"
+  notify: restart app
+
+- name: Installer les dépendances avec Bun
+  command: /usr/local/bin/bun install
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+
+- name: Télécharger le certificat SSL RDS (eu-west-3)
+  get_url:
+    url: https://truststore.pki.rds.amazonaws.com/eu-west-3/eu-west-3-bundle.pem
+    dest: "{{ app_dir }}/src/key.pem"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+
+- name: Déployer le service systemd pour l'application
+  template:
+    src: app.service.j2
+    dest: /etc/systemd/system/{{ project_name }}.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart app
+
+- name: Démarrer et activer le service applicatif
+  systemd:
+    name: "{{ project_name }}"
+    state: started
+    enabled: true
+    daemon_reload: true

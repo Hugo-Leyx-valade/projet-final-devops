@@ -1,0 +1,51 @@
+---
+- name: Installer Java 21 (requis par Jenkins LTS >= 2.463)
+  dnf:
+    name: java-21-amazon-corretto
+    state: present
+
+- name: Ajouter le dépôt Jenkins LTS
+  get_url:
+    url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+    mode: '0644'
+
+- name: Importer la clé GPG Jenkins
+  rpm_key:
+    key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+    state: present
+
+- name: Installer Jenkins
+  dnf:
+    name: jenkins
+    state: present
+    update_cache: true
+
+- name: S'assurer que Java 21 est la version par défaut
+  alternatives:
+    name: java
+    path: /usr/lib/jvm/java-21-amazon-corretto.x86_64/bin/java
+
+- name: Démarrer et activer Jenkins
+  systemd:
+    name: jenkins
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Attendre que Jenkins soit prêt (port 8080)
+  wait_for:
+    port: 8080
+    delay: 10
+    timeout: 120
+
+- name: Récupérer le mot de passe initial Jenkins
+  slurp:
+    src: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_password
+  ignore_errors: true
+
+- name: Afficher le mot de passe initial Jenkins
+  debug:
+    msg: "Mot de passe initial Jenkins : {{ jenkins_initial_password.content | b64decode | trim }}"
+  when: jenkins_initial_password is succeeded

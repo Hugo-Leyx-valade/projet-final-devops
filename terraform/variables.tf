@@ -25,7 +25,7 @@ variable "vpc_cidr" {
 variable "app_instance_type" {
   description = "EC2 instance type for app servers"
   type        = string
-  default     = "t3.small"
+  default     = "t3.micro"
 }
 
 variable "db_instance_class" {
@@ -62,4 +62,16 @@ variable "app_port" {
 variable "ssh_public_key" {
   description = "SSH public key for EC2 access"
   type        = string
+}
+
+variable "citools_instance_type" {
+  description = "EC2 instance type for CI tools server (Jenkins + SonarQube + Nexus)"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "citools_domain" {
+  description = "Domaine de base pour les outils CI (ex: citools.mondomaine.com)"
+  type        = string
+  default     = "citools.local"
 }

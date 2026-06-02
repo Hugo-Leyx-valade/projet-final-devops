@@ -1,0 +1,9 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: restart nexus
+  systemd:
+    name: nexus
+    state: restarted

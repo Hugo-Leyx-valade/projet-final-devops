@@ -1,0 +1,13 @@
+---
+# Configuration AWS (non-sensible)
+aws_account_id: "095713296107"
+aws_vpc_cidr: "10.0.0.0/16"
+
+# Credentials AWS — à remplacer avec vos propres valeurs
+aws_access_key: "VOTRE_AWS_ACCESS_KEY_ID"
+aws_secret_key: "VOTRE_AWS_SECRET_ACCESS_KEY"
+
+# IDs des instances EC2 — à remplacer après terraform apply
+app_instance_ids:
+  - "i-04dfec8a338de85d0"
+  - "i-01008b7b19fc22801"

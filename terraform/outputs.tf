@@ -33,3 +33,22 @@ output "vpc_id" {
   description = "ID du VPC"
   value       = aws_vpc.main.id
 }
+
+output "citools_public_ip" {
+  description = "IP publique fixe de l'instance CI tools"
+  value       = aws_eip.citools.public_ip
+}
+
+output "citools_instance_id" {
+  description = "ID de l'instance CI tools"
+  value       = aws_instance.citools.id
+}
+
+output "citools_urls" {
+  description = "URLs d'accès aux outils CI (via HTTPS Nginx)"
+  value = {
+    jenkins   = "https://${aws_eip.citools.public_ip}:8080 ou https://jenkins.${var.citools_domain}"
+    sonarqube = "https://${aws_eip.citools.public_ip}:9000 ou https://sonarqube.${var.citools_domain}"
+    nexus     = "https://${aws_eip.citools.public_ip}:8081 ou https://nexus.${var.citools_domain}"
+  }
+}

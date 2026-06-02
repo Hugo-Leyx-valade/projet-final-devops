@@ -1,0 +1,52 @@
+---
+- name: Installer Nginx et openssl
+  dnf:
+    name:
+      - nginx
+      - openssl
+    state: present
+
+- name: Créer le répertoire SSL
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: '0700'
+
+- name: Générer les certificats SSL auto-signés pour chaque outil
+  command: >
+    openssl req -x509 -nodes -days 365
+    -newkey rsa:2048
+    -keyout /etc/nginx/ssl/{{ item.name }}.key
+    -out /etc/nginx/ssl/{{ item.name }}.crt
+    -subj "/C=FR/ST=Paris/L=Paris/O={{ project_name }}/CN={{ item.domain }}"
+  args:
+    creates: "/etc/nginx/ssl/{{ item.name }}.crt"
+  loop:
+    - { name: jenkins,   domain: "{{ jenkins_domain }}" }
+    - { name: sonarqube, domain: "{{ sonarqube_domain }}" }
+    - { name: nexus,     domain: "{{ nexus_domain }}" }
+
+- name: Déployer les virtual hosts Nginx
+  template:
+    src: vhost.conf.j2
+    dest: "/etc/nginx/conf.d/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - { name: jenkins,   domain: "{{ jenkins_domain }}",   port: 8080 }
+    - { name: sonarqube, domain: "{{ sonarqube_domain }}", port: 9000 }
+    - { name: nexus,     domain: "{{ nexus_domain }}",     port: 8081 }
+  notify: reload nginx
+
+- name: Supprimer la config Nginx par défaut
+  file:
+    path: /etc/nginx/conf.d/default.conf
+    state: absent
+  notify: reload nginx
+
+- name: Démarrer et activer Nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: true

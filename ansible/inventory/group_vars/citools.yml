@@ -1,0 +1,10 @@
+---
+# Variables spécifiques au groupe citools
+sonarqube_version: "10.4.1.88267"
+nexus_version: "3.66.0-02"
+
+# Domaines (utilisés par le reverse proxy Nginx)
+jenkins_domain: "jenkins.{{ citools_domain }}"
+sonarqube_domain: "sonarqube.{{ citools_domain }}"
+nexus_domain: "nexus.{{ citools_domain }}"
+citools_domain: "citools.local"

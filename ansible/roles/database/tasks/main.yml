@@ -1,0 +1,37 @@
+---
+# Ce rôle configure l'accès à la base de données RDS depuis les instances app.
+# RDS est provisionné par Terraform — aucune installation PostgreSQL serveur ici.
+
+- name: Installer le client PostgreSQL
+  dnf:
+    name: postgresql15
+    state: present
+
+- name: Vérifier la connectivité à RDS
+  command: >
+    psql postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }}
+    -c "SELECT version();"
+  register: db_check
+  changed_when: false
+  failed_when: db_check.rc != 0
+
+- name: Afficher la version PostgreSQL
+  debug:
+    msg: "{{ db_check.stdout_lines[0] }}"
+
+- name: Copier le schéma SQL
+  copy:
+    src: "{{ playbook_dir }}/../api/schema.sql"
+    dest: /tmp/schema.sql
+    owner: "{{ app_user }}"
+    mode: '0644'
+  ignore_errors: true
+
+- name: Appliquer le schéma SQL
+  shell: >
+    psql postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }} -f /tmp/schema.sql
+  args:
+    executable: /bin/bash
+  become_user: "{{ app_user }}"
+  ignore_errors: true
+  changed_when: false

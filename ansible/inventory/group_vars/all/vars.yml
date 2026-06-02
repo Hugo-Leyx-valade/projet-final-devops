@@ -1,0 +1,6 @@
+---
+# Variables générales du projet
+project_name: devops-final
+app_environment: production
+aws_region: eu-west-3
+

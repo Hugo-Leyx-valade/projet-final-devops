@@ -1,0 +1,50 @@
+---
+# Démarre un PostgreSQL 15 local pour simuler RDS dans les tests Molecule
+- name: Prepare — PostgreSQL local
+  hosts: all
+  become: true
+  tasks:
+    - name: Installer PostgreSQL 15 server
+      dnf:
+        name: postgresql15-server
+        state: present
+
+    - name: Créer l'utilisateur applicatif
+      user:
+        name: appuser
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Initialiser la base de données PostgreSQL
+      command: postgresql-setup --initdb
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
+      ignore_errors: true
+
+    - name: Configurer pg_hba.conf — authentification md5
+      replace:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '(\s+)ident$'
+        replace: '\1md5'
+      ignore_errors: true
+
+    - name: Démarrer le service PostgreSQL
+      systemd:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Créer l'utilisateur BDD de test
+      shell: |
+        psql -c "SELECT 1 FROM pg_roles WHERE rolname='appuser'" | grep -q 1 || \
+          psql -c "CREATE USER appuser WITH PASSWORD 'testpassword';"
+      become_user: postgres
+      ignore_errors: true
+
+    - name: Créer la base de données de test
+      shell: |
+        psql -c "SELECT 1 FROM pg_database WHERE datname='appdb'" | grep -q 1 || \
+          psql -c "CREATE DATABASE appdb OWNER appuser;"
+      become_user: postgres
+      ignore_errors: true

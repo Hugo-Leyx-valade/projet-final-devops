@@ -1,0 +1,27 @@
+---
+- name: Verify Jenkins
+  hosts: all
+  become: true
+  tasks:
+    - name: Vérifier que Java est installé
+      command: java -version
+      changed_when: false
+
+    - name: Vérifier que Jenkins est installé
+      command: rpm -q jenkins
+      changed_when: false
+
+    - name: Vérifier que le service Jenkins est actif
+      systemd:
+        name: jenkins
+      register: jenkins_svc
+
+    - name: Affirmer que Jenkins tourne
+      assert:
+        that: jenkins_svc.status.ActiveState == "active"
+        fail_msg: "Jenkins n'est pas actif (état : {{ jenkins_svc.status.ActiveState }})"
+
+    - name: Vérifier que le port 8080 est en écoute
+      wait_for:
+        port: 8080
+        timeout: 10

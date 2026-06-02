@@ -1,0 +1,73 @@
+---
+- name: Installer Java 11 (requis par Nexus 3.x)
+  dnf:
+    name: java-11-amazon-corretto
+    state: present
+
+- name: Créer l'utilisateur nexus (sans login)
+  user:
+    name: nexus
+    shell: /bin/false
+    create_home: true
+    state: present
+
+- name: Créer le répertoire d'installation Nexus
+  file:
+    path: /opt/nexus
+    state: directory
+    owner: nexus
+    group: nexus
+    mode: '0755'
+
+- name: Créer le répertoire de données Nexus
+  file:
+    path: /opt/sonatype-work
+    state: directory
+    owner: nexus
+    group: nexus
+    mode: '0755'
+
+- name: Télécharger Nexus Repository Manager OSS
+  get_url:
+    url: "https://download.sonatype.com/nexus/3/nexus-{{ nexus_version }}-unix.tar.gz"
+    dest: "/tmp/nexus-{{ nexus_version }}-unix.tar.gz"
+    mode: '0644'
+
+- name: Décompresser Nexus
+  unarchive:
+    src: "/tmp/nexus-{{ nexus_version }}-unix.tar.gz"
+    dest: /opt/nexus
+    remote_src: true
+    extra_opts: ["--strip-components=1"]
+    owner: nexus
+    group: nexus
+    creates: /opt/nexus/bin/nexus
+
+- name: Configurer l'utilisateur d'exécution de Nexus
+  lineinfile:
+    path: /opt/nexus/bin/nexus.rc
+    regexp: '^#?run_as_user='
+    line: 'run_as_user="nexus"'
+    create: true
+
+- name: Déployer le service systemd Nexus
+  template:
+    src: nexus.service.j2
+    dest: /etc/systemd/system/nexus.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Démarrer et activer Nexus
+  systemd:
+    name: nexus
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Attendre que Nexus soit prêt (port 8081)
+  wait_for:
+    port: 8081
+    delay: 30
+    timeout: 180

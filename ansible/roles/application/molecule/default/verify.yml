@@ -1,0 +1,67 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    app_dir: /app
+    app_user: appuser
+    project_name: devops-final
+  tasks:
+    - name: Vérifier que Bun est installé
+      command: /usr/local/bin/bun --version
+      register: bun_version
+      changed_when: false
+      failed_when: bun_version.rc != 0
+
+    - name: Afficher la version de Bun
+      debug:
+        msg: "Bun {{ bun_version.stdout }}"
+
+    - name: Vérifier que l'utilisateur applicatif existe
+      getent:
+        database: passwd
+        key: "{{ app_user }}"
+
+    - name: Vérifier que le répertoire de l'application existe
+      stat:
+        path: "{{ app_dir }}"
+      register: app_dir_stat
+
+    - name: Assert que le répertoire de l'application existe
+      assert:
+        that:
+          - app_dir_stat.stat.exists
+          - app_dir_stat.stat.isdir
+        fail_msg: "Le répertoire {{ app_dir }} n'existe pas"
+
+    - name: Vérifier que le fichier .env est présent
+      stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file
+
+    - name: Assert que le fichier .env est présent
+      assert:
+        that: env_file.stat.exists
+        fail_msg: "Le fichier .env est absent de {{ app_dir }}"
+
+    - name: Vérifier que l'unité systemd est présente
+      stat:
+        path: "/etc/systemd/system/{{ project_name }}.service"
+      register: service_file
+
+    - name: Assert que le fichier service systemd existe
+      assert:
+        that: service_file.stat.exists
+        fail_msg: "Le fichier systemd {{ project_name }}.service est absent"
+
+    - name: Vérifier que le service est actif
+      command: systemctl is-active {{ project_name }}
+      register: service_active
+      changed_when: false
+      failed_when: service_active.rc != 0
+
+    - name: Vérifier que le port 3000 répond
+      wait_for:
+        port: 3000
+        host: 127.0.0.1
+        timeout: 20

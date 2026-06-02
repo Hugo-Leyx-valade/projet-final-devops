@@ -1,0 +1,11 @@
+---
+# Configuration de la base de données RDS (non-sensible)
+db_port: 5432
+db_name: appdb
+db_user: appuser
+
+# Endpoint RDS — à remplacer après terraform apply
+db_host: "votre-rds-endpoint.rds.amazonaws.com"
+
+# Mot de passe DB — gardé dans le vault chiffré
+db_password: "{{ vault_db_password }}"

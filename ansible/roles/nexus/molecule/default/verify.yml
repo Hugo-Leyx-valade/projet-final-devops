@@ -1,0 +1,42 @@
+---
+- name: Verify Nexus
+  hosts: all
+  become: true
+  tasks:
+    - name: Vérifier que Java 11 est installé
+      command: java -version
+      changed_when: false
+
+    - name: Vérifier que l'utilisateur nexus existe
+      command: id nexus
+      changed_when: false
+
+    - name: Vérifier que le binaire Nexus est présent
+      stat:
+        path: /opt/nexus/bin/nexus
+      register: nexus_bin
+
+    - name: Affirmer que Nexus est installé
+      assert:
+        that: nexus_bin.stat.exists
+        fail_msg: "Le binaire /opt/nexus/bin/nexus est absent"
+
+    - name: Vérifier que le service systemd est configuré
+      stat:
+        path: /etc/systemd/system/nexus.service
+      register: nexus_service
+
+    - name: Affirmer que le service est présent
+      assert:
+        that: nexus_service.stat.exists
+        fail_msg: "Le fichier de service nexus.service est absent"
+
+    - name: Vérifier que le répertoire de données existe
+      stat:
+        path: /opt/sonatype-work
+      register: nexus_data
+
+    - name: Affirmer que le répertoire de données est présent
+      assert:
+        that: nexus_data.stat.exists
+        fail_msg: "Le répertoire /opt/sonatype-work est absent"
